@@ -22,16 +22,50 @@ export default function RechargePage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  function handleRecharge(e: React.FormEvent) {
+  async function handleRecharge(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+    setSuccess(false);
+    try {
+      const token = localStorage.getItem('token');
+      const studentId = localStorage.getItem('id');
+      if (!token || !studentId) {
+        alert('You must be logged in to recharge.');
+        setLoading(false);
+        return;
+      }
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const res = await fetch(`${apiUrl}/api/tokens/charge`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          studentId,
+          amount: selectedToken.amount,
+          account,
+          paymentMethod: paymentMethod.value
+        })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.message || 'Recharge failed');
+        setLoading(false);
+        return;
+      }
+      // Show loader for 4 seconds, then success for 3 seconds, then redirect
+      setTimeout(() => {
+        setLoading(false);
+        setSuccess(true);
+        setTimeout(() => {
+          window.location.href = '/home';
+        }, 3000);
+      }, 4000);
+    } catch (err) {
+      alert('Network error. Please try again.');
       setLoading(false);
-      setSuccess(true);
-      // Save balance to localStorage for home page
-      const prev = parseFloat(localStorage.getItem("balance") || "0");
-      localStorage.setItem("balance", (prev + selectedToken.amount).toString());
-    }, 2000);
+    }
   }
 
   return (
